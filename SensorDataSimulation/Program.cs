@@ -7,12 +7,12 @@ var selection = new EliteSelection();
 var crossover = new UniformCrossover();
 var mutation = new SimulationMutation();
 var fitness = new SimulationFitness();
-var chromosome = new SimulationChromosome();
-var population = new Population(200, 400, chromosome);
+var chromosome = new SimulationChromosome(new WalkingTemplate(1, 1));
+var population = new Population(60, 150, chromosome);
 
 var ga = new GeneticAlgorithm(population, fitness, selection, crossover, mutation)
 {
-    Termination = new GenerationNumberTermination(1000),
+    Termination = new GenerationNumberTermination(250),
     TaskExecutor = new ParallelTaskExecutor()
 };
 
@@ -22,13 +22,17 @@ sw.Start();
 ga.Start();
 sw.Stop();
 
-Console.WriteLine("Best solution found has {0} fitness.", ga.BestChromosome.Fitness);
-Console.WriteLine(sw.ElapsedMilliseconds + "ms");
+FitnessScore bestFitness = SimulationFitness.EvaluateChromosome(ga.BestChromosome);
+Console.WriteLine($"Best solution found (in {sw.ElapsedMilliseconds}ms) has {bestFitness.Score:0.000}/{bestFitness.MaxScore} fitness.");
+foreach(var score in bestFitness.IndividialScores)
+{
+    Console.WriteLine($"{score.Key}: {score.Value.Score:0.000}/{score.Value.Max}");
+}
 
 if (ga.BestChromosome is not SimulationChromosome bestChromosome)
 {
     throw new Exception("Wrong best chromosome type");
 }
 
-List<BoneParameters> bestParameters = bestChromosome.GetAsBoneParameters();
-File.WriteAllText("bestParameters.txt", JsonConvert.SerializeObject(bestParameters));
+SimulationParameters bestParameters = bestChromosome.GetAsSimulationParameters();
+File.WriteAllText(@"d:\Projects\SensorDataVisualisation\bestParameters.txt", JsonConvert.SerializeObject(bestParameters));

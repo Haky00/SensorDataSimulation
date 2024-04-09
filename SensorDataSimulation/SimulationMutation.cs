@@ -22,8 +22,19 @@ public class SimulationMutation : MutationBase
             {
                 throw new Exception("Wrong gene type");
             }
-            float newValue = value + ((float)random.NextDouble() - 0.5f) * 0.4f;
+            //float newValue = value + ((float)random.NextDouble() - 0.5f) * 0.4f;
+            float newValue = value + (float)GetNormallyDistributedRandom(random, 0, 2);
             chromosome.ReplaceGene(i, new Gene(newValue));
         }
+    }
+
+    private static double GetNormallyDistributedRandom(Random rng, double mean = 0, double variance = 1)
+    {
+        double r = Math.Sqrt(-2 * Math.Log(rng.NextDouble()));
+        double θ = 2 * Math.PI * rng.NextDouble();
+        double x = r * Math.Cos(θ);
+        x *= variance;
+        x += mean;
+        return x;
     }
 }
