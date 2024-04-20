@@ -10,8 +10,11 @@ public class Legs(float length) : ISkeletonPart
 
     static readonly Vector3 directionAxis = new(0, 1, 0);
 
+    public float LastDirection { get; private set; }
+
     public void Update(double delta, Vector3 velocity, float direction)
     {
+        LastDirection = direction;
         Matrix4x4 rotationMatrix = Matrix4x4.CreateFromAxisAngle(directionAxis, direction);
         Vector3 rotatedVelocity = Vector3.Transform(velocity, rotationMatrix);
         Location += rotatedVelocity * (float)delta;

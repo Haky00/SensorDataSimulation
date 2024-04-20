@@ -9,7 +9,7 @@ public record FitnessScore
 
     public void AddWeighedScoreLinear(string name, double score, double weight)
     {
-        double weighedScore = score * weight;
+        double weighedScore = score * Math.Clamp(weight, 0, 1);
         Score += weighedScore;
         IndividialScores[name] = (weighedScore, score);
         MaxScore += score;
@@ -17,7 +17,7 @@ public record FitnessScore
 
     public void AddWeighedScoreSqrt(string name, double score, double weight)
     {
-        AddWeighedScoreLinear(name, score, Math.Sqrt(weight));
+        AddWeighedScoreLinear(name, score, Math.Sqrt(Math.Clamp(weight, 0, 1)));
     }
 
     public void AddScore(string name, double score)
@@ -29,14 +29,14 @@ public record FitnessScore
 
     public void AddWeighedPenaltyLinear(string name, double score, double weight)
     {
-        double weighedScore = score * weight;
+        double weighedScore = score * Math.Clamp(weight, 0, 1);
         Score += -weighedScore;
         IndividialScores[name] = (-weighedScore, -score);
     }
 
     public void AddWeighedPenaltySqrt(string name, double score, double weight)
     {
-        AddWeighedPenaltyLinear(name, score, Math.Sqrt(weight));
+        AddWeighedPenaltyLinear(name, score, Math.Sqrt(Math.Clamp(weight, 0, 1)));
     }
 
     public void AddPenalty(string name, double score)

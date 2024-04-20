@@ -1,4 +1,5 @@
 ﻿using GeneticSharp;
+using SensorDataSimulation.MovementTemplates;
 
 namespace SensorDataSimulation;
 
