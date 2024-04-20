@@ -30,7 +30,7 @@ switch (mode)
     case "onTable":
     {
         float direction = -MathF.PI + (float)rnd.NextDouble() * MathF.PI * 2; // 360° direction range
-        float upFacing = 0.96f + (float)rnd.NextDouble() * 0.4f; // 0.96 - 1.00 up facing value
+        float upFacing = 0.92f + (float)rnd.NextDouble() * 0.08f; // 0.92 - 1.00 up facing value
         template = new OnTableTemplate(direction, upFacing);
         Console.WriteLine($"Using OnTableTemplate with direction {direction:0.000} and target upFacingValue {upFacing:0.000}");
         break;
