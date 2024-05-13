@@ -1,10 +1,12 @@
 ﻿namespace SensorDataSimulation;
 
+// Used for scoring chromosomes, keeps track of all added or subtracted scores
 public record FitnessScore
 {
     public double Score { get; private set; } = 0;
+    // Maximum possible score (so far)
     public double MaxScore {get; private set; } = 0;
-
+    // Contains all added or subtracted scores and their names
     public Dictionary<string, (double Score, double Max)> IndividialScores = [];
 
     public void AddWeighedScoreLinear(string name, double score, double weight)

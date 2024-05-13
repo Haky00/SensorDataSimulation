@@ -1,13 +1,15 @@
 ﻿namespace SensorDataSimulation.MovementTemplates;
 
-public class SittingTemplate(float constDirection, float breathTime) : IChromosomeTemplate
+// Template for a sitting motion with given constant facing direction and time between breaths
+public class SittingTemplate(float constDirection, float breathTime) : IMovementTemplate
 {
     public string Name { get => "Sitting"; }
 
     // Basic bones and legs setup
-    public const int BoneWavesPerFactor = 4;
+    public const int BoneWavesPerFactor = 6;
     public const int LegsVelocityWaves = 0;
     public const int LegsDirectionWaves = 0;
+    const float MinFrequency = 2 * MathF.PI / 35f;
 
     // Frequncy of one wave in each bone for each factor is set to exactly match stepTime
     private const int WavesWithSetFrequencyPerFactor = 1;
@@ -49,8 +51,8 @@ public class SittingTemplate(float constDirection, float breathTime) : IChromoso
     // 35 second simulation
     public float SimulationLength { get; } = 35f;
 
-    // 20 ms simulation intervals
-    public float SimulationTimestep { get; } = 0.020f;
+    // 40 ms simulation intervals
+    public float SimulationTimestep { get; } = 0.040f;
 
     public float[] GetInitialGenes()
     {
@@ -63,6 +65,72 @@ public class SittingTemplate(float constDirection, float breathTime) : IChromoso
         return values;
     }
 
+    private const double VelocityMeanTarget = 0.006536578384818213;
+    private const double VelocityStdDevTarget = 0.0031485489303939664;
+    private const double AccelerationMeanTarget = 0.0700441741975513;
+    private const double AccelerationStdDevTarget = 0.08289680478705595;
+    private const double UpFacingValueMeanTarget = 0.773362970126794;
+    private const double UpFacingValueStdDevTarget = 0.011569981076266491;
+    private const double VerticalAlignmentsMeanTarget = 0.9947331032183104;
+    private const double VerticalAlignmentsStdDevTarget = 0.005830482082136991;
+    private const double AngleVelocityMeanTarget = 0.10745778488993558;
+    private const double AngleVelocityStdDevTarget = 2.6593325544282607;
+
+    public FitnessScore EvaluateSimulationResults(SimulationResults results)
+    {
+        FitnessScore fitness = new();
+        // Encourage non-zero genes
+        // fitness.AddWeighedScoreLinear("nonZeroGenes", 2, results.Parameters.NonZeroParameterPortion);
+        // Step time should have a large impact on legs and bones movement
+        double boneAmplitudePortions = results.Parameters.Bones.Where(x => MovingBones.Contains(x.BoneName)).Sum(x => x.ParametersAmplitudePortion(1));
+        fitness.AddWeighedScoreLinear("boneAmplitudePortions", 1, boneAmplitudePortions * 4);
+        // The phone should face the simulated user head
+        fitness.AddWeighedScoreLinear("averageFacingValue", 6, results.FacingValues.Average());
+        // The angle, amount and roll values should not be too high
+        fitness.AddWeighedScoreLinear("maxAmountValue", 6, Math.Log10(Math.Max(results.MaxAmountValue - 1.2, 1)));
+        fitness.AddWeighedScoreLinear("maxAngleValue", 6, Math.Log10(Math.Max(results.MaxAngleValue - 2, 1)));
+        fitness.AddWeighedScoreLinear("maxRollValue", 6, Math.Log10(Math.Max(results.MaxRollValue - 1.2, 1)));
+
+        // Try to get close to standard deviation target
+        Descriptive velocitiesDesc = new([.. results.PhoneVelocities]);
+        velocitiesDesc.Analyze();
+        double velocitiesMeanTargetHit = Math.Min(velocitiesDesc.Result.Mean, VelocityMeanTarget) / Math.Max(velocitiesDesc.Result.Mean, VelocityMeanTarget);
+        double velocitiesStdDevTargetHit = Math.Min(velocitiesDesc.Result.StdDev, VelocityStdDevTarget) / Math.Max(velocitiesDesc.Result.StdDev, VelocityStdDevTarget);
+        fitness.AddWeighedScoreLinear("velocitiesMeanTargetHit", 8, velocitiesMeanTargetHit);
+        fitness.AddWeighedScoreLinear("velocitiesStdDevTargetHit", 4, velocitiesStdDevTargetHit);
+
+        Descriptive accelerationDesc = new([.. results.PhoneAccelerations]);
+        accelerationDesc.Analyze();
+        double accelerationMeanTargetHit = Math.Min(accelerationDesc.Result.Mean, AccelerationMeanTarget) / Math.Max(accelerationDesc.Result.Mean, AccelerationMeanTarget);
+        double accelerationStdDevTargetHit = Math.Min(accelerationDesc.Result.StdDev, AccelerationStdDevTarget) / Math.Max(accelerationDesc.Result.StdDev, AccelerationStdDevTarget);
+        fitness.AddWeighedScoreLinear("accelerationMeanTargetHit", 4, accelerationMeanTargetHit);
+        fitness.AddWeighedScoreLinear("accelerationStdDevTargetHit", 2, accelerationStdDevTargetHit);
+
+        Descriptive upValueDesc = new([.. results.PhoneUpFacingValues]);
+        upValueDesc.Analyze();
+        double upValueMeanTargetHit = Math.Min(upValueDesc.Result.Mean, UpFacingValueMeanTarget) / Math.Max(upValueDesc.Result.Mean, UpFacingValueMeanTarget);
+        double upValueStdDevTargetHit = Math.Min(upValueDesc.Result.StdDev, UpFacingValueStdDevTarget) / Math.Max(upValueDesc.Result.StdDev, UpFacingValueStdDevTarget);
+        fitness.AddWeighedScoreLinear("upValueMeanTargetHit", 4, upValueMeanTargetHit);
+        fitness.AddWeighedScoreLinear("upValueStdDevTargetHit", 2, upValueStdDevTargetHit);
+
+        Descriptive verticalAlignmentsDesc = new([.. results.PhoneVerticalAlignments]);
+        verticalAlignmentsDesc.Analyze();
+        double verticalMeanTargetHit = Math.Min(verticalAlignmentsDesc.Result.Mean, VerticalAlignmentsMeanTarget) / Math.Max(verticalAlignmentsDesc.Result.Mean, VerticalAlignmentsMeanTarget);
+        double verticalStdDevTargetHit = Math.Min(verticalAlignmentsDesc.Result.StdDev, VerticalAlignmentsStdDevTarget) / Math.Max(verticalAlignmentsDesc.Result.StdDev, VerticalAlignmentsStdDevTarget);
+        fitness.AddWeighedScoreLinear("verticalMeanTargetHit", 4, verticalMeanTargetHit);
+        fitness.AddWeighedScoreLinear("verticalStdDevTargetHit", 2, verticalStdDevTargetHit);
+
+        Descriptive angleVelocitiesDesc = new([.. results.PhoneAngleVelocities]);
+        angleVelocitiesDesc.Analyze();
+        double angleVelocitiesMeanTargetHit = Math.Min(angleVelocitiesDesc.Result.Mean, AngleVelocityMeanTarget) / Math.Max(angleVelocitiesDesc.Result.Mean, AngleVelocityMeanTarget);
+        double angleVelocitiesStdDevTargetHit = Math.Min(angleVelocitiesDesc.Result.StdDev, AngleVelocityStdDevTarget) / Math.Max(angleVelocitiesDesc.Result.StdDev, AngleVelocityStdDevTarget);
+        fitness.AddWeighedScoreLinear("angleVelocitiesMeanTargetHit", 4, angleVelocitiesMeanTargetHit);
+        fitness.AddWeighedScoreLinear("angleVelocitiesStdDevTargetHit", 2, angleVelocitiesStdDevTargetHit);
+
+        return fitness;
+    }
+
+    // Converts passed genes to simulation parameters
     public SimulationParameters GenesToParameters(float[] genes)
     {
         ReadOnlySpan<float> bonesGenes = genes.AsSpan(0, BonesGeneCount);
@@ -87,6 +155,8 @@ public class SittingTemplate(float constDirection, float breathTime) : IChromoso
         return new(legParameters, boneParameters);
     }
 
+    // Below are helper functions for gathering parameters from genes
+
     private BoneParameters GetBoneParameters(ReadOnlySpan<float> genes, string boneName)
     {
         int factorLength = BoneFactorLength - WavesWithSetFrequencyPerFactor;
@@ -103,57 +173,12 @@ public class SittingTemplate(float constDirection, float breathTime) : IChromoso
         List<WaveParameters> waves = [firstWave];
         for (int i = 1; i < BoneWavesPerFactor; i++)
         {
-            waves.Add(new(genes[0 + i * 3], genes[1 + i * 3], genes[2 + i * 3]));
+            float amplitude = genes[0 + i * 3];
+            float phase = genes[1 + i * 3];
+            float frequency = genes[2 + i * 3];
+            frequency += frequency >= 0 ? MinFrequency : -MinFrequency;
+            waves.Add(new(amplitude, phase, frequency));
         }
         return new(constant, waves);
-    }
-
-    private const double AccelerationMeanTarget = 0.0015394875252633256;
-    private const double AccelerationStdDevTarget = 0.0016441933923222296;
-    private const double UpFacingValueMeanTarget = 0.4927963569600095;
-    private const double UpFacingValueStdDevTarget = 0.012568482736003236;
-    private const double AngleVelocityMeanTarget = 0.032786915354642066;
-    private const double AngleVelocityStdDevTarget = 0.05228319519826992;
-
-    public FitnessScore EvaluateSimulationResults(SimulationResults results)
-    {
-        FitnessScore fitness = new();
-        // Encourage non-zero genes
-        // fitness.AddWeighedScoreLinear("nonZeroGenes", 2, results.Parameters.NonZeroParameterPortion);
-        // Step time should have a large impact on legs and bones movement
-        double boneAmplitudePortions = results.Parameters.Bones.Where(x => MovingBones.Contains(x.BoneName)).Sum(x => x.ParametersAmplitudePortion(1));
-        fitness.AddWeighedScoreLinear("boneAmplitudePortions", 1, boneAmplitudePortions * 5);
-        // The phone should face the simulated user head
-        fitness.AddWeighedScoreLinear("averageFacingValue", 6, results.FacingValues.Average());
-        // The angle, amount and roll values should not be too high
-        fitness.AddWeighedPenaltySqrt("maxAmountValue", 4, Math.Log10(Math.Max(results.MaxAmountValue - 1.2, 1)));
-        fitness.AddWeighedPenaltySqrt("maxAngleValue", 4, Math.Log10(Math.Max(results.MaxAngleValue - 2, 1)));
-        fitness.AddWeighedPenaltySqrt("maxRollValue", 4, Math.Log10(Math.Max(results.MaxRollValue - 1.2, 1)));
-
-        // Try to get close to standard deviation target
-        Descriptive accelerationDesc = new([.. results.PhoneAccelerations]);
-        accelerationDesc.Analyze();
-        double accelerationMeanTargetHit = Math.Min(accelerationDesc.Result.Mean, AccelerationMeanTarget) / Math.Max(accelerationDesc.Result.Mean, AccelerationMeanTarget);
-        double accelerationStdDevTargetHit = Math.Min(accelerationDesc.Result.StdDev, AccelerationStdDevTarget) / Math.Max(accelerationDesc.Result.StdDev, AccelerationStdDevTarget);
-        fitness.AddWeighedScoreSqrt("accelerationMeanTargetHit", 4, accelerationMeanTargetHit);
-        fitness.AddWeighedScoreSqrt("accelerationStdDevTargetHit", 2, accelerationStdDevTargetHit);
-
-        Descriptive upValueDesc = new([.. results.PhoneUpFacingValues]);
-        upValueDesc.Analyze();
-        double upValueMeanTargetHit = Math.Min(upValueDesc.Result.Mean, UpFacingValueMeanTarget) / Math.Max(upValueDesc.Result.Mean, UpFacingValueMeanTarget);
-        double upValueStdDevTargetHit = Math.Min(upValueDesc.Result.StdDev, UpFacingValueStdDevTarget) / Math.Max(upValueDesc.Result.StdDev, UpFacingValueStdDevTarget);
-        fitness.AddWeighedScoreSqrt("upValueMeanTargetHit", 4, upValueMeanTargetHit);
-        fitness.AddWeighedScoreSqrt("upValueStdDevTargetHit", 2, upValueStdDevTargetHit);
-
-        Descriptive angleVelocitiesDesc = new([.. results.PhoneAngleVelocities]);
-        angleVelocitiesDesc.Analyze();
-        double angleVelocitiesMeanTargetHit = Math.Min(angleVelocitiesDesc.Result.Mean, AngleVelocityMeanTarget) / Math.Max(angleVelocitiesDesc.Result.Mean, AngleVelocityMeanTarget);
-        double angleVelocitiesStdDevTargetHit = Math.Min(angleVelocitiesDesc.Result.StdDev, AngleVelocityStdDevTarget) / Math.Max(angleVelocitiesDesc.Result.StdDev, AngleVelocityStdDevTarget);
-        fitness.AddWeighedScoreSqrt("angleVelocitiesMeanTargetHit", 4, angleVelocitiesMeanTargetHit);
-        fitness.AddWeighedScoreSqrt("angleVelocitiesStdDevTargetHit", 2, angleVelocitiesStdDevTargetHit);
-
-        //double meanTargetHit = d.Result.Mean > meanTarget ? meanTarget / d.Result.Mean : d.Result.Mean / meanTarget;
-        //fitness.AddWeighedScoreSqrt("meanTargetHit", 15, meanTargetHit);
-        return fitness;
     }
 }

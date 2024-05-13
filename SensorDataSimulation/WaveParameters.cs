@@ -2,10 +2,16 @@
 
 namespace SensorDataSimulation;
 
+// Parameters for a single sine
 public readonly struct WaveParameters(float amplitude, float phase, float frequency)
 {
+    [JsonProperty("a")]
     public readonly float Amplitude = amplitude;
+
+    [JsonProperty("p")]
     public readonly float Phase = phase;
+
+    [JsonProperty("f")]
     public readonly float Frequency = frequency;
 
     public float Compute(float time)
@@ -13,6 +19,7 @@ public readonly struct WaveParameters(float amplitude, float phase, float freque
         return Amplitude * MathF.Sin(Frequency * time + Phase);
     }
 
+    // Returns the portion of child parameters that are not zero
     [JsonIgnore]
     public int NonZeroParameters
     {

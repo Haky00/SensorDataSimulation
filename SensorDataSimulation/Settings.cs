@@ -1,5 +1,6 @@
 ﻿namespace SensorDataSimulation;
 
+// A static class with some global constants
 public static class Settings
 {
     public const int BonesCount = 5;

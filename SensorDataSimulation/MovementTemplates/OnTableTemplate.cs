@@ -1,6 +1,7 @@
 ﻿namespace SensorDataSimulation.MovementTemplates;
 
-public class OnTableTemplate(float direction, float upValueTarget) : IChromosomeTemplate
+// Template for a stationary device facing up on a table, with the legs facing in a given direction
+public class OnTableTemplate(float direction, float upValueTarget) : IMovementTemplate
 {
     public string Name { get => "OnTable"; }
 
@@ -49,17 +50,6 @@ public class OnTableTemplate(float direction, float upValueTarget) : IChromosome
         return genes;
     }
 
-    public SimulationParameters GenesToParameters(float[] values)
-    {
-        LegParameters legParameters = new(new(0, []), new(0, []), new(0, []), new(direction, []));
-        List<BoneParameters> boneParameters = [];
-        for (int i = 0; i < Settings.BoneNames.Length; i++)
-        {
-            boneParameters.Add(new(Settings.BoneNames[i], new(values[i * 3], []), new(values[i * 3 + 1], []), new(values[i * 3 + 2], [])));
-        }
-        return new(legParameters, boneParameters);
-    }
-
     public FitnessScore EvaluateSimulationResults(SimulationResults results)
     {
         FitnessScore fitness = new();
@@ -72,5 +62,17 @@ public class OnTableTemplate(float direction, float upValueTarget) : IChromosome
         double upDirectionHit = Math.Min(upValue, upValueTarget) / Math.Max(upValue, upValueTarget);
         fitness.AddWeighedScoreLinear("upValueMeanTargetHit", 6, upDirectionHit);
         return fitness;
+    }
+
+    // Converts passed genes to simulation parameters
+    public SimulationParameters GenesToParameters(float[] values)
+    {
+        LegParameters legParameters = new(new(0, []), new(0, []), new(0, []), new(direction, []));
+        List<BoneParameters> boneParameters = [];
+        for (int i = 0; i < Settings.BoneNames.Length; i++)
+        {
+            boneParameters.Add(new(Settings.BoneNames[i], new(values[i * 3], []), new(values[i * 3 + 1], []), new(values[i * 3 + 2], [])));
+        }
+        return new(legParameters, boneParameters);
     }
 }

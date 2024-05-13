@@ -2,6 +2,8 @@ using System;
 
 namespace SensorDataSimulation;
 
+// Code from: https://www.codeproject.com/Articles/27340/A-User-Friendly-C-Descriptive-Statistic-Class
+
 /// <summary>
 /// Descriptive class
 /// </summary>

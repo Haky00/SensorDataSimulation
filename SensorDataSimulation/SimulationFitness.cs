@@ -5,18 +5,10 @@ using GeneticSharp;
 
 namespace SensorDataSimulation;
 
+// The custom fitness class, it performs a simulation and passes the results to the template object
 public class SimulationFitness : IFitness
 {
     public double Evaluate(IChromosome c) => EvaluateChromosome(c).Score;
-
-    private static double FirstSineAmplitudePortion(SimulationFactor factor) {
-        double total = factor.SineParameters.Sum(x => Math.Abs(x.Amplitude));
-        if (total == 0)
-        {
-            return 0;
-        }
-        return Math.Abs(factor.SineParameters.First().Amplitude) / total;
-    }
 
     public static FitnessScore EvaluateChromosome(IChromosome c)
     {
@@ -26,24 +18,24 @@ public class SimulationFitness : IFitness
         }
 
         Skeleton skeleton = new(chromosome.GetAsSimulationParameters());
-
+        // Perform simulation and gather base results
         List<double> facingValues = [];
         List<Vector3> phonePositions = [];
         List<Quaternion> phoneRotations = [];
-        List<Vector3> legsOffsets = [];
         List<double> legsDirections = [];
 
-        for (float time = 0f; time < chromosome.Template.SimulationLength; time += chromosome.Template.SimulationTimestep)
+        for (float time = 10f; time < 10f + chromosome.Template.SimulationLength; time += chromosome.Template.SimulationTimestep)
         {
             skeleton.Update(time);
             facingValues.Add(GetFacingValuePhoneToEyes(skeleton));
             Bone phone = skeleton.GetBoneByName("Phone")!;
             phonePositions.Add(phone.Location);
             phoneRotations.Add(phone.Rotation);
-            legsOffsets.Add(skeleton.LastLegsOffset);
             legsDirections.Add(skeleton.Legs.LastDirection);
         }
-        SimulationResults results = new(chromosome.Template.SimulationTimestep, skeleton.Parameters, phonePositions, phoneRotations, legsOffsets, legsDirections, facingValues);
+        // Create a results object to compute additional values
+        SimulationResults results = new(chromosome.Template.SimulationTimestep, skeleton.Parameters, phonePositions, phoneRotations, legsDirections, facingValues);
+        // Return the fitness value of the template
         return chromosome.Template.EvaluateSimulationResults(results);
     }
 

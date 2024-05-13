@@ -3,14 +3,13 @@ using System.Reflection.Metadata;
 
 namespace SensorDataSimulation;
 
+// Class representing a simulated skeleton
 public class Skeleton
 {
     public readonly Legs Legs;
     public readonly Legs ConstantLegs;
     public readonly List<Bone> Bones;
     public readonly List<Bone> EndAffectors;
-
-    public Vector3 LastLegsOffset { get; private set; }
 
     private SimulationParameters _parameters;
     public SimulationParameters Parameters
@@ -56,17 +55,13 @@ public class Skeleton
         }
     }
 
+    float lastTime = 0;
+
     public bool Update(float time)
     {
         float direction = Parameters.Legs.Direction.Compute(time);
         Vector3 legsVelocity = new(Parameters.Legs.VelocityX.Compute(time), Parameters.Legs.VelocityY.Compute(time), Parameters.Legs.VelocityZ.Compute(time));
-        Vector3 constantLegsVelocity = new(Parameters.Legs.VelocityX.Constant, Parameters.Legs.VelocityY.Constant, Parameters.Legs.VelocityZ.Constant);
-        ConstantLegs.Location = new(Legs.Location.X, Legs.Location.Y, Legs.Location.Z);
-        Legs.Update(time, legsVelocity, direction);
-        ConstantLegs.Update(time, constantLegsVelocity, direction);
-        Vector3 legsOffset = ConstantLegs.Location - Legs.Location;
-        Matrix4x4 rotationMatrix = Matrix4x4.CreateFromAxisAngle(new(0, 1, 0), -direction * MathF.PI);
-        LastLegsOffset = Vector3.Transform(legsOffset, rotationMatrix);
+        Legs.Update(time - lastTime, legsVelocity, direction);
 
         for (int i = 0; i < Bones.Count; i++)
         {
@@ -82,6 +77,7 @@ public class Skeleton
             endAffector.Update(0, 0, 0);
         }
 
+        lastTime = time;
         return true;
     }
 

@@ -2,6 +2,7 @@
 
 namespace SensorDataSimulation;
 
+// Common interface for bons and legs
 public interface ISkeletonPart
 {
     public float Length { get; }
